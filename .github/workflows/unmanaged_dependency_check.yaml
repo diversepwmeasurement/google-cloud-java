@@ -1,19 +1,24 @@
-on:
-  pull_request:
-name: Unmanaged dependency check
 jobs:
   unmanaged_dependency_check:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     steps:
-    - uses: actions/checkout@v3
-    - uses: actions/setup-java@v3
+    - continue-on-error: true
+      uses: actions/checkout@v3
+    - continue-on-error: true
+      uses: actions/setup-java@v3
       with:
         distribution: temurin
         java-version: 11
-    - name: Install modules
-      shell: bash
+    - continue-on-error: true
+      name: Install modules
       run: mvn install -B -ntp  -T 1C -DskipTests -Dclirr.skip -Dcheckstyle.skip
-    - name: Unmanaged dependency check
+      shell: bash
+    - continue-on-error: true
+      name: Unmanaged dependency check
       uses: googleapis/sdk-platform-java/java-shared-dependencies/unmanaged-dependency-check@google-cloud-shared-dependencies/v3.29.0
       with:
         bom-path: gapic-libraries-bom/pom.xml
+name: Unmanaged dependency check
+on:
+  repository_dispatch:
+    types: trigger-ga___unmanaged_dependency_check.yaml

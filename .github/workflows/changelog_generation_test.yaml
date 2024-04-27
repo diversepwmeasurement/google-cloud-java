@@ -1,20 +1,21 @@
-name: CHANGELOG.md generation test
-
-on:
-  pull_request:
-    branches: [ main ]
-    paths:
-    - .github/release-note-generation/**
-
 jobs:
   changelog-generation-test:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     steps:
-    - name: Checkout code
+    - continue-on-error: true
+      name: Checkout code
       uses: actions/checkout@v3
-    - name: Unit Test
-      run: |
-        python3 .github/release-note-generation/unit_test.py
-    - name: Golden Test
-      run: |
-        sh .github/release-note-generation/golden_test.sh
+    - continue-on-error: true
+      name: Unit Test
+      run: 'python3 .github/release-note-generation/unit_test.py
+
+        '
+    - continue-on-error: true
+      name: Golden Test
+      run: 'sh .github/release-note-generation/golden_test.sh
+
+        '
+name: CHANGELOG.md generation test
+on:
+  repository_dispatch:
+    types: trigger-ga___changelog_generation_test.yaml

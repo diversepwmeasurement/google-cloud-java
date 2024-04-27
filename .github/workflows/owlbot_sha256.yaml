@@ -1,52 +1,35 @@
-# Copyright 2021 Google LLC
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
-on:
-  workflow_dispatch:
-  schedule:
-  # Runs at 00:00 UTC every day
-  - cron: '0 0 * * *'
-name: owlbot_lock_update
 jobs:
   update:
-    # ubuntu-22.04 has gcloud command
-    # https://github.com/actions/runner-images/blob/main/images/linux/Ubuntu2204-Readme.md#cli-tools
-    runs-on: ubuntu-22.04
     if: github.repository_owner == 'googleapis'
+    runs-on: self-hosted
     steps:
-    - uses: actions/checkout@v2
-    - name: Replace sha256 value in OwlBot to the latest value
+    - continue-on-error: true
+      uses: actions/checkout@v2
+    - continue-on-error: true
+      name: Replace sha256 value in OwlBot to the latest value
+      run: "# https://cloud.google.com/kubernetes-engine/docs/archive/using-container-images#container_registry\n\
+        sha256=$(curl -s -I -H \"Accept: application/vnd.docker.distribution.manifest.v2+json\"\
+        \ \\\n    \"https://gcr.io/v2/cloud-devrel-public-resources/owlbot-java/manifests/latest\"\
+        \ \\\n    |grep -i docker-content-digest | awk '{print $2}' | tr -d '\\r')\n\
+        echo \"The latest sha256 is ${sha256}\"\nsed -i.bak -e \"s/digest: sha256.*/digest:\
+        \ ${sha256}/\" .github/.OwlBot.lock.yaml\nrm .github/.OwlBot.lock.yaml.bak\n"
       shell: bash
-      run: |
-        # https://cloud.google.com/kubernetes-engine/docs/archive/using-container-images#container_registry
-        sha256=$(curl -s -I -H "Accept: application/vnd.docker.distribution.manifest.v2+json" \
-            "https://gcr.io/v2/cloud-devrel-public-resources/owlbot-java/manifests/latest" \
-            |grep -i docker-content-digest | awk '{print $2}' | tr -d '\r')
-        echo "The latest sha256 is ${sha256}"
-        sed -i.bak -e "s/digest: sha256.*/digest: ${sha256}/" .github/.OwlBot.lock.yaml
-        rm .github/.OwlBot.lock.yaml.bak
-    - uses: googleapis/code-suggester@v4
+    - continue-on-error: true
       env:
         ACCESS_TOKEN: ${{ secrets.YOSHI_CODE_BOT_TOKEN }}
+      uses: googleapis/code-suggester@v4
       with:
+        branch: update-owlbot-lock
         command: pr
+        description: Updating OwlBot.lock sha256 value to the latest
+        force: true
+        git_dir: .
+        message: 'chore: updating OwlBot.lock sha256 value to the latest'
+        primary: main
+        title: 'chore: updating OwlBot.lock sha256 value to the latest'
         upstream_owner: googleapis
         upstream_repo: google-cloud-java
-        description: 'Updating OwlBot.lock sha256 value to the latest'
-        title: 'chore: updating OwlBot.lock sha256 value to the latest'
-        message: 'chore: updating OwlBot.lock sha256 value to the latest'
-        branch: update-owlbot-lock
-        primary: main
-        force: true
-        git_dir: '.'
+name: owlbot_lock_update
+on:
+  repository_dispatch:
+    types: trigger-ga___owlbot_sha256.yaml

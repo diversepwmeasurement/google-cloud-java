@@ -1,52 +1,49 @@
-name: Googleapis Sync (Hermetic Build)
-on:
-  workflow_dispatch:
-
 jobs:
   create-pull-request:
     name: Create pull request for recent googleapis changes
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     steps:
-    - uses: actions/checkout@v3
+    - continue-on-error: true
+      uses: actions/checkout@v3
       with:
-        repository: 'googleapis/google-cloud-java'
-    - name: Setup workspace
-      run: |
-        mkdir -p "${WORKSPACE}"
-        git config user.email "yoshi-code-bot[bot]@users.noreply.github.com"
-        git config user.name "yoshi-code-bot"
-        
-        git clone --quiet --branch "${BASE_BRANCH}" --depth 1 \
-            https://github.com/googleapis/google-cloud-java \
-            "${WORKSPACE}/google-cloud-java"
-        cd "${WORKSPACE}/google-cloud-java"
-        # This should match the branch name we push to remote in the following steps
-        git checkout -b monorepo_googleapis_change
+        repository: googleapis/google-cloud-java
+    - continue-on-error: true
       env:
-        WORKSPACE: /tmp/googleapis-sync
         BASE_BRANCH: main
-    - name: Propagate googleapis commits to google-cloud-java
-      run: |
-        .kokoro/sync_with_googleapis.sh
-      env:
         WORKSPACE: /tmp/googleapis-sync
+      name: Setup workspace
+      run: "mkdir -p \"${WORKSPACE}\"\ngit config user.email \"yoshi-code-bot[bot]@users.noreply.github.com\"\
+        \ngit config user.name \"yoshi-code-bot\"\n\ngit clone --quiet --branch \"\
+        ${BASE_BRANCH}\" --depth 1 \\\n    https://github.com/googleapis/google-cloud-java\
+        \ \\\n    \"${WORKSPACE}/google-cloud-java\"\ncd \"${WORKSPACE}/google-cloud-java\"\
+        \n# This should match the branch name we push to remote in the following steps\n\
+        git checkout -b monorepo_googleapis_change\n"
+    - continue-on-error: true
+      env:
         GOOGLE_CLOUD_JAVA_DIR: /tmp/googleapis-sync/google-cloud-java
-    - name: Push changes to remote repository
-      run: |
-        git remote add origin_with_auth \
-            https://${{ github.actor }}:${{ github.token }}@github.com/${{ github.repository }}.git
-        git push -f --set-upstream origin_with_auth monorepo_googleapis_change
-      working-directory: /tmp/googleapis-sync/google-cloud-java
+        WORKSPACE: /tmp/googleapis-sync
+      name: Propagate googleapis commits to google-cloud-java
+      run: '.kokoro/sync_with_googleapis.sh
+
+        '
+    - continue-on-error: true
       env:
         GITHUB_TOKEN: ${{ secrets.YOSHI_CODE_BOT_TOKEN }}
-    - name: Create pull request
-      run: |
-        gh pr create --title='chore: googleapis change propagation via hermetic build' \
-            --body='googleapis change propagation via hermetic build' \
-            --base="${BASE_BRANCH}" \
-            --head=monorepo_googleapis_change
+      name: Push changes to remote repository
+      run: "git remote add origin_with_auth \\\n    https://${{ github.actor }}:${{\
+        \ github.token }}@github.com/${{ github.repository }}.git\ngit push -f --set-upstream\
+        \ origin_with_auth monorepo_googleapis_change\n"
       working-directory: /tmp/googleapis-sync/google-cloud-java
+    - continue-on-error: true
       env:
-        GITHUB_TOKEN: ${{ secrets.YOSHI_CODE_BOT_TOKEN }}
-        # Note for cutover to main: update this to main
         BASE_BRANCH: main
+        GITHUB_TOKEN: ${{ secrets.YOSHI_CODE_BOT_TOKEN }}
+      name: Create pull request
+      run: "gh pr create --title='chore: googleapis change propagation via hermetic\
+        \ build' \\\n    --body='googleapis change propagation via hermetic build'\
+        \ \\\n    --base=\"${BASE_BRANCH}\" \\\n    --head=monorepo_googleapis_change\n"
+      working-directory: /tmp/googleapis-sync/google-cloud-java
+name: Googleapis Sync (Hermetic Build)
+on:
+  repository_dispatch:
+    types: trigger-ga___googleapis_hermetic_sync.yaml
